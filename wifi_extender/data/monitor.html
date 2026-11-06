@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Monitor – Abdul WiFi Extender</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="shell"></div>
+<template id="pageContent">
+
+  <!-- Live metric cards -->
+  <div class="stats-grid" style="margin-bottom:1.25rem;">
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <span class="stat-card-label">Signal</span>
+        <span class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M1.42 9a16 16 0 0121.16 0"/><path d="M5 12.55a11 11 0 0114.08 0"/>
+            <path d="M8.53 16.11a6 6 0 016.95 0"/><circle cx="12" cy="20" r="1" fill="currentColor"/>
+          </svg>
+        </span>
+      </div>
+      <div class="stat-card-value" id="monRssi">—</div>
+      <div class="stat-card-sub" id="monRssiLabel">dBm</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <span class="stat-card-label">Free Heap</span>
+        <span class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6M9 12h6M9 15h4"/>
+          </svg>
+        </span>
+      </div>
+      <div class="stat-card-value" id="monHeap">—</div>
+      <div class="stat-card-sub" id="monHeapSub">bytes</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <span class="stat-card-label">Uptime</span>
+        <span class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </span>
+      </div>
+      <div class="stat-card-value uptime-str" id="monUptime">—</div>
+      <div class="stat-card-sub">since boot</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-card-top">
+        <span class="stat-card-label">Clients</span>
+        <span class="stat-card-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </span>
+      </div>
+      <div class="stat-card-value" id="monClients">—</div>
+      <div class="stat-card-sub">connected</div>
+    </div>
+  </div>
+
+  <!-- Detailed bars -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+
+    <div class="card">
+      <div class="card-header"><h2>Memory Usage</h2></div>
+      <div class="card-body">
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">Free Heap</div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="heapBar2" style="width:0%;"></div></div>
+        <div id="heapBar2Label" style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;margin-bottom:1rem;"></div>
+
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">Heap Fragmentation</div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="fragBar" style="width:0%;background:var(--warning);"></div></div>
+        <div id="fragBarLabel" style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header"><h2>Network Quality</h2></div>
+      <div class="card-body">
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">Signal Strength</div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="rssiBar2" style="width:0%;"></div></div>
+        <div id="rssiBar2Label" style="font-size:.72rem;color:var(--text-muted);margin-top:.3rem;margin-bottom:1rem;"></div>
+
+        <div style="font-size:.78rem;color:var(--text-muted);margin-bottom:.4rem;">Connection Status</div>
+        <div id="connStatusBlock" style="padding:.5rem 0;"></div>
+
+        <div class="alert alert-info show" style="margin-top:.75rem;font-size:.76rem;">
+          ℹ️ The ESP8266 does not expose real-time traffic counters. Download/upload speeds cannot be accurately measured.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- History chart (simple CSS sparkline) -->
+  <div class="card" style="margin-top:0;">
+    <div class="card-header">
+      <h2>RSSI History (last 20 samples)</h2>
+      <span style="font-size:.75rem;color:var(--text-muted);">Updates every 5 s</span>
+    </div>
+    <div class="card-body">
+      <div id="rssiChart" style="display:flex;align-items:flex-end;gap:4px;height:60px;"></div>
+      <div id="rssiChartLabels" style="display:flex;gap:4px;margin-top:4px;"></div>
+    </div>
+  </div>
+
+</template>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3><p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+requireAuth();
+document.getElementById('shell').innerHTML =
+  renderShell('monitor','Network Monitor','Live device and connection statistics') +
+  document.getElementById('pageContent').innerHTML +
+  '</div></div></div>';
+initSidebar();
+
+const FREE_HEAP_MAX = 50000;
+const rssiHistory = [];
+const MAX_HISTORY = 20;
+
+async function refreshMonitor() {
+  try {
+    const [sr, fr] = await Promise.all([
+      apiFetch('/api/status'),
+      apiFetch('/api/sysinfo')
+    ]);
+    const s = await sr.json();
+    const f = await fr.json();
+
+    if (s.ok) {
+      document.getElementById('monRssi').textContent   = s.internet ? s.rssi + ' dBm' : '—';
+      document.getElementById('monRssiLabel').textContent = s.internet ? rssiLabel(s.rssi) : 'No connection';
+      document.getElementById('monHeap').textContent   = s.free_heap.toLocaleString();
+      document.getElementById('monHeapSub').textContent = formatBytes(s.free_heap) + ' free';
+      document.getElementById('monUptime').textContent = formatUptime(s.uptime_s);
+      document.getElementById('monClients').textContent = s.clients;
+
+      // Connection status block
+      document.getElementById('connStatusBlock').innerHTML = s.internet
+        ? `<span class="badge online"><span class="dot"></span>Connected to ${s.sta_ssid}</span>`
+        : `<span class="badge offline"><span class="dot"></span>Not connected to upstream</span>`;
+
+      // RSSI bar
+      const rssiPct = s.internet ? Math.min(100, Math.max(0, Math.round(((s.rssi + 100) / 60) * 100))) : 0;
+      document.getElementById('rssiBar2').style.width = rssiPct + '%';
+      document.getElementById('rssiBar2Label').textContent = s.internet
+        ? (s.rssi + ' dBm — ' + rssiLabel(s.rssi)) : 'No upstream connection';
+
+      // Push to history
+      if (s.internet) {
+        rssiHistory.push(s.rssi);
+        if (rssiHistory.length > MAX_HISTORY) rssiHistory.shift();
+        renderRssiChart();
+      }
+    }
+
+    if (f.ok) {
+      // Heap bar
+      const heapPct = Math.min(100, Math.round((f.free_heap / FREE_HEAP_MAX) * 100));
+      document.getElementById('heapBar2').style.width = heapPct + '%';
+      document.getElementById('heapBar2Label').textContent =
+        formatBytes(f.free_heap) + ' free, max block ' + formatBytes(f.max_free_block);
+
+      // Frag bar
+      document.getElementById('fragBar').style.width = f.heap_fragmentation + '%';
+      document.getElementById('fragBarLabel').textContent = f.heap_fragmentation + '% fragmented';
+    }
+  } catch(e) {}
+}
+
+function renderRssiChart() {
+  const chart = document.getElementById('rssiChart');
+  if (!rssiHistory.length) { chart.innerHTML = ''; return; }
+  const minR = Math.min(...rssiHistory), maxR = Math.max(...rssiHistory);
+  const range = maxR - minR || 1;
+  const barW = Math.floor((chart.clientWidth || 300) / MAX_HISTORY) - 4;
+  chart.innerHTML = rssiHistory.map(r => {
+    const h = Math.round(((r - minR) / range) * 50) + 10;
+    const color = r >= -65 ? 'var(--success)' : r >= -75 ? 'var(--warning)' : 'var(--danger)';
+    return `<div title="${r} dBm" style="flex:1;height:${h}px;background:${color};border-radius:3px 3px 0 0;min-width:6px;"></div>`;
+  }).join('');
+}
+
+refreshMonitor();
+setInterval(refreshMonitor, 5000);
+window.addEventListener('resize', renderRssiChart);
+</script>
+</body>
+</html>
+

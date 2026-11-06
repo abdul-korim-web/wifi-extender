@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>WiFi Config – Abdul WiFi Extender</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="shell"></div>
+<template id="pageContent">
+
+  <div id="alertBox" class="alert"></div>
+
+  <!-- Current config summary -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-header">
+      <h2>Current Configuration</h2>
+      <span id="currentBadge" class="badge offline"><span class="dot"></span>Loading…</span>
+    </div>
+    <div class="card-body">
+      <table class="info-table">
+        <tr><td>Router SSID</td><td id="curSsid">—</td></tr>
+        <tr><td>Router Password</td><td><em style="color:var(--text-muted)">Hidden for security</em></td></tr>
+        <tr><td>Extended WiFi SSID</td><td id="curAp">—</td></tr>
+        <tr><td>Extended WiFi Password</td><td><em style="color:var(--text-muted)">Hidden for security</em></td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Scan + configure form -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;align-items:start;">
+
+    <!-- Left: network scan -->
+    <div class="card">
+      <div class="card-header">
+        <h2>Available Networks</h2>
+        <button class="btn btn-secondary btn-sm" id="btnScan" onclick="startScan()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+          Scan
+        </button>
+      </div>
+      <div class="card-body">
+        <div class="loading-row" id="scanSpinner" style="display:none;">
+          <span class="spinner"></span> Scanning for networks…
+        </div>
+        <div class="network-list" id="networkList">
+          <div style="color:var(--text-muted);font-size:.85rem;">Click Scan to discover networks.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: config form -->
+    <div class="card">
+      <div class="card-header"><h2>WiFi Settings</h2></div>
+      <div class="card-body">
+        <form id="wifiForm" onsubmit="saveConfig(event)">
+          <div class="form-group">
+            <label>Router SSID</label>
+            <input class="form-control" type="text" id="fSsid" placeholder="Select from scan or type…" required/>
+          </div>
+          <div class="form-group">
+            <label>Router Password</label>
+            <input class="form-control" type="password" id="fPass" placeholder="Leave blank if open"/>
+            <div class="form-hint">Leave empty for open (unsecured) networks.</div>
+          </div>
+          <div class="form-group">
+            <label>Extended WiFi Name (AP SSID)</label>
+            <input class="form-control" type="text" id="fAp" placeholder="e.g. AbdulWiFi-Home" required/>
+          </div>
+          <div class="form-group">
+            <label>Extended WiFi Password</label>
+            <input class="form-control" type="password" id="fApPass" placeholder="Min 8 chars, or leave blank"/>
+            <div class="form-hint">Leave empty to create an open access point.</div>
+          </div>
+
+          <div id="saveAlert" class="alert" style="margin-top:.5rem;"></div>
+
+          <div style="display:flex;gap:.75rem;margin-top:1rem;">
+            <button type="submit" class="btn btn-primary" id="btnSave">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
+              </svg>
+              Save &amp; Apply
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="loadCurrentConfig()">Reset</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="alert alert-info show" style="margin-top:.5rem;">
+    ⚠️ Saving new WiFi credentials will restart the device. You may need to reconnect to the extended network.
+  </div>
+</template>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3>
+    <p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+requireAuth();
+document.getElementById('shell').innerHTML =
+  renderShell('wifi', 'WiFi Configuration', 'Scan, select and configure your upstream and extended networks') +
+  document.getElementById('pageContent').innerHTML +
+  '</div></div></div>';
+initSidebar();
+
+let scanTimer = null;
+let selectedSsid = '';
+
+async function loadCurrentConfig() {
+  try {
+    const r = await apiFetch('/api/wifi-config');
+    const d = await r.json();
+    if (!d.ok) return;
+    document.getElementById('curSsid').textContent = d.ssid || 'Not configured';
+    document.getElementById('curAp').textContent   = d.ap   || 'Not configured';
+    // Check status for badge
+    const sr = await apiFetch('/api/status');
+    const sd = await sr.json();
+    const badge = document.getElementById('currentBadge');
+    if (sd.internet) {
+      badge.className = 'badge online';
+      badge.innerHTML = '<span class="dot"></span>Connected';
+    } else {
+      badge.className = 'badge offline';
+      badge.innerHTML = '<span class="dot"></span>Not connected';
+    }
+    if (d.ssid) document.getElementById('fSsid').value   = d.ssid;
+    if (d.ap)   document.getElementById('fAp').value     = d.ap;
+  } catch(e) {}
+}
+
+async function startScan() {
+  document.getElementById('scanSpinner').style.display = 'flex';
+  document.getElementById('networkList').innerHTML = '';
+  document.getElementById('btnScan').disabled = true;
+  clearTimeout(scanTimer);
+  pollScan();
+}
+
+async function pollScan() {
+  try {
+    const r  = await apiFetch('/api/scan');
+    const d  = await r.json();
+    if (d.scanning) {
+      scanTimer = setTimeout(pollScan, 1500);
+      return;
+    }
+    document.getElementById('scanSpinner').style.display = 'none';
+    document.getElementById('btnScan').disabled = false;
+    renderNetworks(d.networks || []);
+  } catch(e) {
+    document.getElementById('scanSpinner').style.display = 'none';
+    document.getElementById('btnScan').disabled = false;
+  }
+}
+
+function renderNetworks(nets) {
+  const list = document.getElementById('networkList');
+  if (!nets.length) {
+    list.innerHTML = '<div style="color:var(--text-muted);font-size:.85rem;">No networks found. Try scanning again.</div>';
+    return;
+  }
+  // Sort by RSSI descending
+  nets.sort((a, b) => b.rssi - a.rssi);
+  list.innerHTML = nets.map(n => `
+    <div class="network-item${n.ssid===selectedSsid?' selected':''}" onclick="selectNetwork('${n.ssid.replace(/'/g,"\\'")}')">
+      <div>
+        <div class="net-ssid">${escHtml(n.ssid)}</div>
+        <div class="net-rssi">${n.rssi} dBm &mdash; ${rssiLabel(n.rssi)} ${n.enc ? '🔒' : '🔓'}</div>
+      </div>
+      ${signalBarsHTML(n.rssi)}
+    </div>
+  `).join('');
+}
+
+function escHtml(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function selectNetwork(ssid) {
+  selectedSsid = ssid;
+  document.getElementById('fSsid').value = ssid;
+  document.querySelectorAll('.network-item').forEach(el => el.classList.remove('selected'));
+  // Re-render to reflect selection
+  event && event.currentTarget && event.currentTarget.classList.add('selected');
+  document.getElementById('fPass').focus();
+}
+
+async function saveConfig(e) {
+  e.preventDefault();
+  const ssid   = document.getElementById('fSsid').value.trim();
+  const pass   = document.getElementById('fPass').value;
+  const ap     = document.getElementById('fAp').value.trim();
+  const appass = document.getElementById('fApPass').value;
+  const alertEl = document.getElementById('saveAlert');
+
+  if (!ssid) { showAlert(alertEl, 'error', 'Router SSID is required.'); return; }
+  if (!ap)   { showAlert(alertEl, 'error', 'Extended WiFi name is required.'); return; }
+  if (appass && appass.length < 8) { showAlert(alertEl, 'error', 'AP password must be at least 8 characters or left blank.'); return; }
+
+  const ok = await confirmDialog('Apply WiFi Settings',
+    'The device will restart and connect to "' + ssid + '". This page will become temporarily unavailable.');
+  if (!ok) return;
+
+  const btn = document.getElementById('btnSave');
+  btn.disabled = true;
+  btn.textContent = 'Saving…';
+  try {
+    const r = await apiFetch('/api/wifi-config', {
+      method: 'POST',
+      body: { ssid, pass, ap, appass }
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showAlert(alertEl, 'success', '✅ ' + (d.message || 'Config saved! Device is restarting…'));
+      showToast('Config saved — device restarting', 'success', 5000);
+    } else {
+      showAlert(alertEl, 'error', '❌ ' + (d.error || 'Failed to save.'));
+    }
+  } catch(err) {
+    showAlert(alertEl, 'success', '✅ Config sent! Device is restarting…');
+  }
+  btn.disabled = false;
+  btn.textContent = 'Save & Apply';
+}
+
+function showAlert(el, type, msg) {
+  el.className = 'alert alert-' + (type === 'error' ? 'error' : 'success') + ' show';
+  el.textContent = msg;
+}
+
+loadCurrentConfig();
+startScan();
+</script>
+</body>
+</html>
+

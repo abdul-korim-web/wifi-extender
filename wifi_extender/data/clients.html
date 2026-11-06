@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Connected Devices – Abdul WiFi Extender</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="shell"></div>
+<template id="pageContent">
+
+  <div class="card">
+    <div class="card-header">
+      <h2>Connected Devices</h2>
+      <div style="display:flex;align-items:center;gap:.75rem;">
+        <span id="clientCount" class="badge online"><span class="dot"></span>0 clients</span>
+        <button class="btn btn-secondary btn-sm" onclick="loadClients()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/>
+          </svg>
+          Refresh
+        </button>
+      </div>
+    </div>
+    <div class="card-body">
+      <div class="loading-row" id="clientSpinner">
+        <span class="spinner"></span> Loading connected devices…
+      </div>
+      <div class="client-list" id="clientList"></div>
+    </div>
+  </div>
+
+  <div class="alert alert-info show">
+    ℹ️ The ESP8266 provides MAC and IP address information for clients connected to the extended WiFi. Hostnames are not available via the ESP8266 SDK and are shown as "Unknown".
+  </div>
+
+</template>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3><p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+requireAuth();
+document.getElementById('shell').innerHTML =
+  renderShell('clients','Connected Devices','Devices connected to your extended WiFi') +
+  document.getElementById('pageContent').innerHTML +
+  '</div></div></div>';
+initSidebar();
+
+const DEVICE_ICONS = ['💻','📱','🖥️','🎮','📺','🖨️'];
+
+function randomIcon(mac) {
+  // deterministic icon per MAC
+  const idx = mac.split(':').reduce((s, x) => s + parseInt(x, 16), 0) % DEVICE_ICONS.length;
+  return DEVICE_ICONS[idx];
+}
+
+function macVendorHint(mac) {
+  // No real OUI lookup on ESP8266 — honest limitation
+  return 'Unknown device';
+}
+
+async function loadClients() {
+  document.getElementById('clientSpinner').style.display = 'flex';
+  document.getElementById('clientList').innerHTML = '';
+  try {
+    const r = await apiFetch('/api/clients');
+    const d = await r.json();
+    document.getElementById('clientSpinner').style.display = 'none';
+    const clients = d.clients || [];
+    const badge = document.getElementById('clientCount');
+    badge.innerHTML = `<span class="dot"></span>${clients.length} client${clients.length!==1?'s':''}`;
+    badge.className = 'badge ' + (clients.length > 0 ? 'online' : 'warning');
+
+    if (!clients.length) {
+      document.getElementById('clientList').innerHTML =
+        '<div style="color:var(--text-muted);text-align:center;padding:2rem;">No devices currently connected to the extended WiFi.</div>';
+      return;
+    }
+
+    document.getElementById('clientList').innerHTML = clients.map(c => `
+      <div class="client-item">
+        <div class="client-avatar">${randomIcon(c.mac)}</div>
+        <div class="client-info">
+          <div class="client-ip">${c.ip || 'Unknown IP'}</div>
+          <div class="client-mac">MAC: ${c.mac}</div>
+          <div class="client-mac">${macVendorHint(c.mac)}</div>
+        </div>
+        <div>
+          <span class="badge online"><span class="dot"></span>Connected</span>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {
+    document.getElementById('clientSpinner').style.display = 'none';
+    document.getElementById('clientList').innerHTML =
+      '<div style="color:var(--danger);">Failed to load client list.</div>';
+  }
+}
+
+loadClients();
+setInterval(loadClients, 10000);
+</script>
+</body>
+</html>
+

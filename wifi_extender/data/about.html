@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>About – Abdul WiFi Extender</title>
+<link rel="stylesheet" href="style.css"/>
+<style>
+.about-hero{
+  background:linear-gradient(135deg,rgba(0,180,255,.08) 0%,rgba(0,229,204,.05) 100%);
+  border:1px solid var(--border);border-radius:16px;
+  padding:2.5rem 2rem;text-align:center;margin-bottom:1.5rem;
+}
+.about-hero .hero-icon{font-size:3.5rem;margin-bottom:1rem;}
+.about-hero h1{font-size:1.8rem;font-weight:800;
+  background:var(--gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;margin-bottom:.35rem;}
+.about-hero .tagline{color:var(--text-muted);font-size:.9rem;max-width:480px;margin:0 auto;}
+.about-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;}
+.about-pill{
+  display:inline-flex;align-items:center;gap:.5rem;
+  background:var(--accent-dim);border:1px solid rgba(0,180,255,.2);
+  border-radius:999px;padding:.35rem .9rem;font-size:.82rem;color:var(--accent);font-weight:500;
+}
+.credit-block{
+  background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.25rem 1.5rem;
+}
+.credit-block h3{font-size:.8rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:.6rem;}
+.credit-name{font-size:1.1rem;font-weight:700;color:var(--text-primary);}
+.credit-link{font-size:.82rem;color:var(--accent);}
+.lib-list{list-style:none;display:flex;flex-direction:column;gap:.5rem;}
+.lib-list li{display:flex;align-items:center;justify-content:space-between;
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:.5rem .9rem;font-size:.85rem;}
+.lib-list li span:last-child{color:var(--text-muted);font-size:.78rem;}
+</style>
+</head>
+<body>
+<div id="shell"></div>
+<template id="pageContent">
+
+  <div class="about-hero">
+    <div class="hero-icon">📡</div>
+    <h1>Abdul WiFi Extender</h1>
+    <div style="display:flex;gap:.6rem;justify-content:center;flex-wrap:wrap;margin:.75rem 0;">
+      <span class="about-pill">ESP8266 NodeMCU</span>
+      <span class="about-pill">lwIP NAPT</span>
+      <span class="about-pill">ESPAsyncWebServer</span>
+      <span class="about-pill">LittleFS</span>
+    </div>
+    <p class="tagline">A custom ESP8266-based WiFi range extender with a modern, fully-connected web administration dashboard.</p>
+  </div>
+
+  <div class="about-grid" style="margin-bottom:1.25rem;">
+    <div class="credit-block">
+      <h3>Developer</h3>
+      <div class="credit-name">Abdul Korim</div>
+      <a class="credit-link" href="https://github.com/abdul-korim-web" target="_blank">🔗 github.com/abdul-korim-web</a>
+    </div>
+    <div class="credit-block">
+      <h3>Original Author</h3>
+      <div class="credit-name">Pius Onyema Ndukwu</div>
+      <a class="credit-link" href="https://github.com/Pius171/esp8266-wifi-extender" target="_blank">🔗 Original Repository</a>
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-header"><h2>How It Works</h2></div>
+    <div class="card-body" style="font-size:.88rem;line-height:1.75;color:var(--text-muted);">
+      <p>The <strong style="color:var(--text-primary);">Abdul WiFi Extender</strong> turns an ESP8266 microcontroller into a WiFi range extender using <strong style="color:var(--accent);">lwIP Network Address Port Translation (NAPT)</strong>.</p>
+      <br/>
+      <ol style="padding-left:1.25rem;">
+        <li>The ESP8266 connects to your existing router as a <strong style="color:var(--text-primary);">STA (Station)</strong>.</li>
+        <li>Simultaneously, it broadcasts its own <strong style="color:var(--text-primary);">SoftAP</strong> network with a configurable SSID.</li>
+        <li>NAPT transparently routes traffic from connected AP clients through the upstream router.</li>
+        <li>DNS servers from the upstream router are relayed to AP-side clients via DHCP.</li>
+      </ol>
+    </div>
+  </div>
+
+  <!-- Library versions -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-header"><h2>Required Libraries</h2></div>
+    <div class="card-body">
+      <ul class="lib-list">
+        <li><span>ESP8266 Arduino Core</span><span>3.0.0+ (with NAPT support)</span></li>
+        <li><span>ESPAsyncWebServer</span><span>1.2.3+</span></li>
+        <li><span>ESPAsyncTCP</span><span>1.2.2+</span></li>
+        <li><span>ArduinoJson</span><span>6.x (StaticJsonDocument)</span></li>
+        <li><span>LittleFS</span><span>Built-in with ESP8266 Core 3.x</span></li>
+        <li><span>lwIP NAPT</span><span>Built-in (Core must be compiled with LWIP_FEATURES=1)</span></li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Security note -->
+  <div class="card" style="border-color:rgba(255,165,0,.3);">
+    <div class="card-header"><h2>⚠️ Security Limitations</h2></div>
+    <div class="card-body" style="font-size:.85rem;color:var(--text-muted);line-height:1.75;">
+      <ul style="padding-left:1.25rem;">
+        <li>Admin credentials are stored in <strong style="color:var(--text-primary);">plain text</strong> in LittleFS. This is a hardware limitation — the ESP8266 has no hardware security enclave or TPM.</li>
+        <li>Session tokens are <strong style="color:var(--text-primary);">not cryptographically secure</strong> (ESP8266 lacks a CSPRNG). Use only on trusted local networks.</li>
+        <li>HTTPS/TLS is not implemented — traffic between your browser and the ESP8266 is unencrypted on the LAN.</li>
+        <li>This dashboard is intended for <strong style="color:var(--text-primary);">home / local network use only</strong>. Do not expose the admin interface to the internet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div style="text-align:center;margin-top:1.5rem;font-size:.75rem;color:var(--text-muted);">
+    Abdul WiFi Extender &mdash; MIT License &mdash; Built with ❤️ for the maker community
+  </div>
+
+</template>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3><p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+requireAuth();
+document.getElementById('shell').innerHTML =
+  renderShell('about','About','Product information and technical details') +
+  document.getElementById('pageContent').innerHTML +
+  '</div></div></div>';
+initSidebar();
+</script>
+</body>
+</html>
+

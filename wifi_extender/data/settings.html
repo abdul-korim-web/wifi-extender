@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Settings – Abdul WiFi Extender</title>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+<div id="shell"></div>
+<template id="pageContent">
+
+  <!-- System info -->
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.25rem;">
+    <div class="card">
+      <div class="card-header"><h2>Device Information</h2></div>
+      <div class="card-body">
+        <table class="info-table">
+          <tr><td>Product</td><td>Abdul WiFi Extender</td></tr>
+          <tr><td>Developer</td><td>Abdul Korim</td></tr>
+          <tr><td>Hardware</td><td>ESP8266 NodeMCU ESP-12E</td></tr>
+          <tr><td>Chip ID</td><td id="siChipId">—</td></tr>
+          <tr><td>CPU Frequency</td><td id="siCpu">—</td></tr>
+          <tr><td>Flash Size</td><td id="siFlash">—</td></tr>
+          <tr><td>SDK Version</td><td id="siSdk">—</td></tr>
+          <tr><td>Arduino Core</td><td id="siCore">—</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><h2>Memory &amp; Storage</h2></div>
+      <div class="card-body">
+        <table class="info-table">
+          <tr><td>Free Heap</td><td id="siFreeHeap">—</td></tr>
+          <tr><td>Max Free Block</td><td id="siMaxBlock">—</td></tr>
+          <tr><td>Heap Frag</td><td id="siFrag">—</td></tr>
+          <tr><td>Sketch Size</td><td id="siSketch">—</td></tr>
+          <tr><td>Sketch Free</td><td id="siSketchFree">—</td></tr>
+          <tr><td>LittleFS Total</td><td id="siFsTotal">—</td></tr>
+          <tr><td>LittleFS Used</td><td id="siFsUsed">—</td></tr>
+          <tr><td>Uptime</td><td id="siUptime">—</td></tr>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Change password -->
+  <div class="card" style="margin-bottom:1.25rem;">
+    <div class="card-header"><h2>Change Admin Password</h2></div>
+    <div class="card-body">
+      <div class="alert alert-info show" style="margin-bottom:1rem;font-size:.8rem;">
+        ⚠️ Security note: Credentials are stored in plain text in LittleFS. Do not use a password you use elsewhere. The ESP8266 does not support bcrypt or hardware-secure storage.
+      </div>
+      <form id="pwForm" onsubmit="changePassword(event)" style="max-width:360px;">
+        <div class="form-group">
+          <label>Current Password</label>
+          <input class="form-control" type="password" id="pwCurrent" required/>
+        </div>
+        <div class="form-group">
+          <label>New Password</label>
+          <input class="form-control" type="password" id="pwNew" minlength="4" required/>
+          <div class="form-hint">Minimum 4 characters.</div>
+        </div>
+        <div class="form-group">
+          <label>Confirm New Password</label>
+          <input class="form-control" type="password" id="pwConfirm" required/>
+        </div>
+        <div id="pwAlert" class="alert"></div>
+        <button type="submit" class="btn btn-primary" id="btnPw">Update Password</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Danger zone -->
+  <div class="card" style="border-color:rgba(255,79,79,.3);">
+    <div class="card-header" style="border-bottom-color:rgba(255,79,79,.2);">
+      <h2 style="color:var(--danger);">⚠️ Danger Zone</h2>
+    </div>
+    <div class="card-body">
+      <div style="display:flex;flex-direction:column;gap:1rem;">
+
+        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <div style="font-weight:600;">Restart Device</div>
+            <div style="font-size:.8rem;color:var(--text-muted);">Reboots the ESP8266. WiFi clients will briefly disconnect.</div>
+          </div>
+          <button class="btn btn-secondary" onclick="doRestart()">Restart</button>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <div style="font-weight:600;">Reset WiFi Config</div>
+            <div style="font-size:.8rem;color:var(--text-muted);">Clears saved router credentials. Device will start in Setup AP mode.</div>
+          </div>
+          <button class="btn btn-danger" onclick="doResetWifi()">Reset WiFi</button>
+        </div>
+
+        <div style="border-top:1px solid var(--border);padding-top:1rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+          <div>
+            <div style="font-weight:600;">Factory Reset</div>
+            <div style="font-size:.8rem;color:var(--text-muted);">Formats LittleFS — wipes all config, credentials, and uploaded files. Cannot be undone.</div>
+          </div>
+          <button class="btn btn-danger" onclick="doFactoryReset()">Factory Reset</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</template>
+
+<div id="toast"></div>
+<div class="modal-overlay" id="confirmOverlay">
+  <div class="modal">
+    <h3 id="confirmTitle">Confirm</h3><p id="confirmMsg"></p>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" id="confirmCancel">Cancel</button>
+      <button class="btn btn-danger" id="confirmOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+<script>
+requireAuth();
+document.getElementById('shell').innerHTML =
+  renderShell('settings','Settings','Device configuration, security, and system controls') +
+  document.getElementById('pageContent').innerHTML +
+  '</div></div></div>';
+initSidebar();
+
+async function loadSysInfo() {
+  try {
+    const r = await apiFetch('/api/sysinfo');
+    const d = await r.json();
+    if (!d.ok) return;
+    document.getElementById('siChipId').textContent     = '0x' + d.chip_id;
+    document.getElementById('siCpu').textContent        = d.cpu_freq + ' MHz';
+    document.getElementById('siFlash').textContent      = formatBytes(d.flash_size);
+    document.getElementById('siSdk').textContent        = d.sdk_ver;
+    document.getElementById('siCore').textContent       = d.core_ver;
+    document.getElementById('siFreeHeap').textContent   = formatBytes(d.free_heap);
+    document.getElementById('siMaxBlock').textContent   = formatBytes(d.max_free_block);
+    document.getElementById('siFrag').textContent       = d.heap_fragmentation + '%';
+    document.getElementById('siSketch').textContent     = formatBytes(d.sketch_size);
+    document.getElementById('siSketchFree').textContent = formatBytes(d.sketch_free);
+    document.getElementById('siFsTotal').textContent    = formatBytes(d.fs_total);
+    document.getElementById('siFsUsed').textContent     = formatBytes(d.fs_used) + ' (' + Math.round((d.fs_used/d.fs_total)*100) + '%)';
+    document.getElementById('siUptime').textContent     = formatUptime(d.uptime_s);
+  } catch(e) {}
+}
+
+async function changePassword(e) {
+  e.preventDefault();
+  const cur  = document.getElementById('pwCurrent').value;
+  const nw   = document.getElementById('pwNew').value;
+  const conf = document.getElementById('pwConfirm').value;
+  const alertEl = document.getElementById('pwAlert');
+  if (nw !== conf) { showPwAlert('error','New passwords do not match.'); return; }
+  const btn = document.getElementById('btnPw');
+  btn.disabled = true; btn.textContent = 'Updating…';
+  try {
+    const r = await apiFetch('/api/change-password', {
+      method: 'POST',
+      body: { current: cur, newpass: nw }
+    });
+    const d = await r.json();
+    if (d.ok) {
+      showPwAlert('success','✅ Password updated successfully.');
+      document.getElementById('pwForm').reset();
+      showToast('Password updated!', 'success');
+    } else {
+      showPwAlert('error','❌ ' + (d.error || 'Failed.'));
+    }
+  } catch(err) { showPwAlert('error','Connection error.'); }
+  btn.disabled = false; btn.textContent = 'Update Password';
+}
+
+function showPwAlert(type, msg) {
+  const el = document.getElementById('pwAlert');
+  el.className = 'alert alert-' + (type === 'error' ? 'error' : 'success') + ' show';
+  el.textContent = msg;
+}
+
+async function doRestart() {
+  const ok = await confirmDialog('Restart Device', 'The ESP8266 will reboot. WiFi connections will be briefly interrupted.');
+  if (!ok) return;
+  try {
+    await apiFetch('/api/restart', { method: 'POST' });
+    showToast('Restarting device…', 'info', 5000);
+  } catch(e) {
+    showToast('Restart command sent', 'success');
+  }
+}
+
+async function doResetWifi() {
+  const ok = await confirmDialog('Reset WiFi Config', 'All saved WiFi credentials will be erased. The device will restart in setup mode.');
+  if (!ok) return;
+  try {
+    const r = await apiFetch('/api/reset-wifi', { method: 'POST' });
+    const d = await r.json();
+    showToast(d.message || 'WiFi config cleared', 'success', 5000);
+  } catch(e) { showToast('Reset command sent', 'success'); }
+}
+
+async function doFactoryReset() {
+  const ok = await confirmDialog('Factory Reset', '⚠️ This will ERASE all files, config, and credentials from LittleFS. This cannot be undone. The device will restart.');
+  if (!ok) return;
+  // Extra confirmation
+  const ok2 = await confirmDialog('Are you absolutely sure?', 'Type your intent: this will wipe everything and you will need to set up the device from scratch.');
+  if (!ok2) return;
+  try {
+    await apiFetch('/api/factory-reset', { method: 'POST' });
+    showToast('Factory reset initiated — device is restarting', 'info', 6000);
+    setTimeout(() => { sessionStorage.removeItem('token'); location.href = '/'; }, 4000);
+  } catch(e) { showToast('Factory reset command sent', 'success'); }
+}
+
+loadSysInfo();
+setInterval(loadSysInfo, 10000);
+</script>
+</body>
+</html>
+
