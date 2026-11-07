@@ -42,6 +42,21 @@
 | 🔐 **Secure Login** | Session-based authentication |
 | ⚙️ **Easy Config** | Configure everything without reflashing |
 | 🔄 **Factory Reset** | One-click reset via web or GPIO0 button |
+| 🎬 **Video Review** | Step-by-step installation & review video |
+
+---
+
+## 📹 Installation & Review Video
+
+Watch the complete hardware setup, installation walkthrough, and dashboard review:
+
+<div align="center">
+
+[![Watch the Video](https://img.shields.io/badge/▶%20Watch%20Video-Installation%20%26%20Review-red?style=for-the-badge&logo=youtube&logoColor=white)](review/wifi%20extender%20using%20exp8266.mp4)
+
+*Video file location:* [`review/wifi extender using exp8266.mp4`](review/wifi%20extender%20using%20exp8266.mp4)
+
+</div>
 
 ---
 
@@ -58,8 +73,8 @@
 │ Monitor  │     3          28 KB      2h 15m         │
 │ Settings │                                          │
 │ About    │  Network Info    Device Health           │
-│          │  IP: 192.168.x  ████████░░ 78% heap     │
-│ [Logout] │  AP: AbdulWiFi  ████████████ Good signal│
+│          │  IP: 172.217.28.254  ████████░░ 78% heap │
+│ [Logout] │  AP: AbdulWiFi       ████████████ Good   │
 └──────────┴──────────────────────────────────────────┘
 ```
 
@@ -179,18 +194,27 @@ esptool.py --port COM3 erase_flash
 
 ---
 
-### ✅ Step 4 — First Boot Setup
+### ✅ Step 4 — First Boot & Accessing Dashboard
 
-1. Power on the ESP8266
-2. It will create an open WiFi network: **`AbdulWiFi-Setup`**
-3. Connect your phone or laptop to **`AbdulWiFi-Setup`**
-4. Open your browser and go to:
+1. **Initial Setup (Before WiFi is configured):**
+   - Power on the ESP8266.
+   - It will create an open WiFi network: **`AbdulWiFi-Setup`**.
+   - Connect your phone or laptop to **`AbdulWiFi-Setup`**.
+   - Open your browser and go to:
+     ```
+     http://192.168.4.1
+     ```
 
-```
-http://192.168.4.1
-```
+2. **Connected State (After connecting to upstream WiFi):**
+   - Once the ESP8266 connects to your router, it starts operating in repeater (NAPT) mode.
+   - Connect to your extended WiFi network (e.g., **`AbdulWiFi`**).
+   - The Admin Dashboard page is accessible at:
+     ```
+     http://172.217.28.254
+     ```
+   *(You can also use the local IP assigned by your main router).*
 
-5. Login with default credentials:
+3. **Login Credentials:**
 
 | Field | Value |
 |-------|-------|
@@ -204,15 +228,15 @@ http://192.168.4.1
 
 ## 🌐 Dashboard Pages
 
-| Page | URL | Description |
-|------|-----|-------------|
-| 🔐 Login | `http://192.168.4.1/` | Secure admin login |
-| 🏠 Dashboard | `/dashboard.html` | Live overview — RSSI, clients, heap, uptime |
-| 📶 WiFi Config | `/wifi.html` | Scan networks, configure upstream + extended WiFi |
-| 👥 Devices | `/clients.html` | Connected client list (MAC + IP) |
-| 📊 Monitor | `/monitor.html` | RSSI history chart, memory usage |
-| ⚙️ Settings | `/settings.html` | Password change, restart, factory reset |
-| ℹ️ About | `/about.html` | Product info and tech details |
+| Page | URL (Connected Mode) | URL (Setup Mode) | Description |
+|------|----------------------|------------------|-------------|
+| 🔐 Login | `http://172.217.28.254/` | `http://192.168.4.1/` | Secure admin login |
+| 🏠 Dashboard | `/dashboard.html` | `/dashboard.html` | Live overview — RSSI, clients, heap, uptime |
+| 📶 WiFi Config | `/wifi.html` | `/wifi.html` | Scan networks, configure upstream + extended WiFi |
+| 👥 Devices | `/clients.html` | `/clients.html` | Connected client list (MAC + IP) |
+| 📊 Monitor | `/monitor.html` | `/monitor.html` | RSSI history chart, memory usage |
+| ⚙️ Settings | `/settings.html` | `/settings.html` | Password change, restart, factory reset |
+| ℹ️ About | `/about.html` | `/about.html` | Product info and tech details |
 
 ---
 
